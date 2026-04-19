@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ants-in-the-shell"
+version = "0.1.0"
+description = "A terminal-based ant colony simulation."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Rich Hoyt" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Environment :: Console :: Curses",
+    "Topic :: Games/Entertainment :: Simulation",
+]
+
+# Runtime dependencies.
+# curses is in the stdlib on Unix; Windows needs the windows-curses
+# shim. The environment marker below means "only install this dependency
+# when the target platform is Windows."
+dependencies = [
+    "windows-curses; platform_system == 'Windows'",
+]
+
+[project.optional-dependencies]
+# Installed via `pip install -e ".[dev]"`
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+# Lets a user type `antfarm` directly once the package is installed,
+# as an alternative to `python -m antfarm`.
+antfarm = "antfarm.__main__:main"
+
+[tool.setuptools.packages.find]
+# Tells setuptools where to find our package. Just the top-level `antfarm`
+# directory for now.
+include = ["antfarm*"]
+exclude = ["tests*", "notes*"]
+
+# -- Ruff: linter and formatter --------------------------------------------
+# Ruff is used for both linting and formatting.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W are pycodestyle, F is pyflakes (real bugs),
+# I is import sorting, UP is pyupgrade (modernize syntax), B is flake8-bugbear
+# (common gotchas), SIM is flake8-simplify.
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+
+# -- pytest ----------------------------------------------------------------
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# Add the project root to sys.path so tests can `import antfarm` without
+# needing to install the package.
+pythonpath = ["."]
+# Fail on warnings during tests.
+filterwarnings = ["error"]
