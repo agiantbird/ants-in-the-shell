@@ -87,3 +87,70 @@ class TestTick:
             for x in range(sim.world.width)
             if sim.world.tile_at(x, y).kind is TileKind.TUNNEL
         )
+
+
+class TestPauseCommands:
+    def test_fresh_sim_is_not_paused(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        assert sim.is_paused is False
+
+    def test_pause_sets_flag(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        sim.pause()
+        assert sim.is_paused is True
+
+    def test_resume_clears_flag(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        sim.pause()
+        sim.resume()
+        assert sim.is_paused is False
+
+    def test_toggle_pause(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        sim.toggle_pause()
+        assert sim.is_paused is True
+        sim.toggle_pause()
+        assert sim.is_paused is False
+
+    def test_tick_is_noop_when_paused(self):
+        sim = Simulation(width=10, height=10, starting_ants=1, seed=0)
+        sim.tick()
+        sim.tick()
+        ticks_before = sim.tick_count
+
+        sim.pause()
+        for _ in range(20):
+            sim.tick()
+        assert sim.tick_count == ticks_before
+
+
+class TestSpeedCommands:
+    def test_default_speed_is_one(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        assert sim.speed == 1.0
+
+    def test_speed_up_multiplies(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        sim.speed_up()
+        assert sim.speed == 2.0
+        sim.speed_up()
+        assert sim.speed == 4.0
+
+    def test_slow_down_divides(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        sim.slow_down()
+        assert sim.speed == 0.5
+
+    def test_speed_up_is_capped(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        for _ in range(20):
+            sim.speed_up()
+        # MAX_SPEED is 8.0.
+        assert sim.speed == 8.0
+
+    def test_slow_down_is_floored(self):
+        sim = Simulation(width=5, height=5, starting_ants=1, seed=0)
+        for _ in range(20):
+            sim.slow_down()
+        # MIN_SPEED is 0.25.
+        assert sim.speed == 0.25

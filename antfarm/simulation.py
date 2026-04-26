@@ -17,6 +17,12 @@ from antfarm.exceptions import TileNotDiggableError
 from antfarm.tile import Tile, TileKind
 from antfarm.world import World
 
+# Speed expressed as a multiplier with 1.0 as the default rate.
+# Doubling the speed halves the time between ticks.
+MIN_SPEED: float = 0.25
+MAX_SPEED: float = 8.0
+SPEED_STEP: float = 2.0
+
 
 class Simulation:
     """The top-level simulation object."""
@@ -36,6 +42,10 @@ class Simulation:
         self.world = World(width=width, height=height)
         self.colony = Colony()
 
+        # Runtime state controllable via the command API
+        self._paused: bool = False
+        self._speed: float = 1.0
+
         self._seed_colony(starting_ants)
 
     def _seed_colony(self, count: int) -> None:
@@ -53,8 +63,42 @@ class Simulation:
             ant_rng = random.Random(self._rng.random())
             self.colony.add(Ant(x=center_x, y=center_y, rng=ant_rng))
 
+    # -- command API ---------------------------------------------------
+
+    @property
+    def is_paused(self) -> bool:
+        return self._paused
+
+    @property
+    def speed(self) -> float:
+        return self._speed
+
+    def pause(self) -> None:
+        self._paused = True
+
+    def resume(self) -> None:
+        self._paused = False
+
+    def toggle_pause(self) -> None:
+        self._paused = not self._paused
+
+    def speed_up(self) -> None:
+        """Multiply speed by ``SPEED_STEP``, capped at ``MAX_SPEED``."""
+        self._speed = min(self._speed * SPEED_STEP, MAX_SPEED)
+
+    def slow_down(self) -> None:
+        """Divide speed by ``SPEED_STEP``, capped at ``MIN_SPEED``."""
+        self._speed = max(self._speed / SPEED_STEP, MIN_SPEED)
+
+    # ------------------------------------------------------------------
+
     def tick(self) -> None:
-        """Advance the simulation by one step."""
+        """Advance the simulation by one step.
+        If the simulaton is paused, this is a no-op. Pause handling lives here.
+        """
+        if self._paused:
+            return
+
         for ant in self.colony:
             action = ant.step(self.world)
             self._apply_action(ant, action)
