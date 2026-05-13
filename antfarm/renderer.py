@@ -19,6 +19,9 @@ from antfarm.tile import TileKind
 _TILE_GLYPHS: dict[TileKind, str] = {
     TileKind.DIRT: "#",
     TileKind.TUNNEL: ".",
+    TileKind.ROCK: "R",
+    TileKind.FOOD: "F",
+    TileKind.NEST: "@"
 }
 
 _ANT_GLYPH: str = "A"
@@ -48,6 +51,8 @@ class StringRenderer:
         return (
             f"tick {simulation.tick_count}  "
             f"ants {len(simulation.colony)}  "
+            f"food {simulation.food_remaining}  "
+            f"reserves {simulation.colony.food_reserves}  "
             f"speed {simulation.speed:g}x  "
             f"[{state}]  "
             f"(q quit, p pause, +/- speed)"
@@ -63,6 +68,9 @@ _COLOR_DIRT = 1
 _COLOR_TUNNEL = 2
 _COLOR_ANT = 3
 _COLOR_STATUS = 4
+_COLOR_ROCK = 5
+_COLOR_FOOD = 6
+_COLOR_NEST = 7
 
 
 class CursesRenderer:
@@ -98,6 +106,9 @@ class CursesRenderer:
         curses.init_pair(_COLOR_TUNNEL, curses.COLOR_WHITE, bg)
         curses.init_pair(_COLOR_ANT, curses.COLOR_RED, bg)
         curses.init_pair(_COLOR_STATUS, curses.COLOR_CYAN, bg)
+        curses.init_pair(_COLOR_ROCK, curses.COLOR_BLUE, bg)
+        curses.init_pair(_COLOR_FOOD, curses.COLOR_GREEN, bg)
+        curses.init_pair(_COLOR_NEST, curses.COLOR_MAGENTA, bg)
         return True
 
     def render(self, simulation: Simulation) -> None:
@@ -139,6 +150,12 @@ class CursesRenderer:
             return self._attr(_COLOR_DIRT)
         if ch == _TILE_GLYPHS[TileKind.TUNNEL]:
             return self._attr(_COLOR_TUNNEL)
+        if ch == _TILE_GLYPHS[TileKind.ROCK]:
+            return self._attr(_COLOR_ROCK)
+        if ch == _TILE_GLYPHS[TileKind.FOOD]:
+            return self._attr(_COLOR_FOOD)
+        if ch == _TILE_GLYPHS[TileKind.NEST]:
+            return self._attr(_COLOR_NEST)
         return 0
 
     def _attr(self, pair_id: int) -> int:

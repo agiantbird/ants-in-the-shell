@@ -67,3 +67,47 @@ def test_status_line_shows_paused_state():
     sim.pause()
     paused_status = renderer.frame_lines(sim)[-1]
     assert "PAUSED" in paused_status
+
+
+def test_status_line_shows_food_remaining():
+    sim = Simulation(width=20, height=10, starting_ants=1, seed=0)
+    renderer = StringRenderer()
+
+    status = renderer.frame_lines(sim)[-1]
+    assert f"food {sim.food_remaining}" in status
+
+
+def test_status_line_shows_colony_reserves():
+    sim = Simulation(width=10, height=10, starting_ants=1, seed=0)
+    renderer = StringRenderer()
+
+    status = renderer.frame_lines(sim)[-1]
+    assert "reserves 0" in status
+
+
+def test_frame_renders_nest_glyph():
+    """The nest tile should appear in rendered output at the start."""
+    sim = Simulation(width=10, height=10, starting_ants=1, seed=0)
+    renderer = StringRenderer()
+
+    # The nest tile is at (5, 5), but the ant is also there at tick 0.
+    # So, check that the nest is there when the ant has wandered off.
+    sim.tick()
+    sim.tick()
+    sim.tick()
+    lines = renderer.frame_lines(sim)
+    grid_text = "\n".join(lines[:-1])  # exclude status line
+
+    assert("@" in grid_text)  # '@' is the nest glyph
+
+
+def test_frame_renders_rock_and_food():
+    """Rocks and food should be visible in rendered output."""
+    sim = Simulation(width=30, height=15, starting_ants=1, seed=0)
+    renderer = StringRenderer()
+
+    lines = renderer.frame_lines(sim)
+    grid_text = "\n".join(lines[:-1])
+
+    assert "R" in grid_text
+    assert "F" in grid_text

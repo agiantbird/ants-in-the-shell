@@ -10,11 +10,12 @@ Deterministic based on a given seed: same seed + same initial conditions
 
 import random
 
+from antfarm import config, worldgen
 from antfarm.actions import Dig, Idle, Move
 from antfarm.ant import Ant
 from antfarm.colony import Colony
 from antfarm.exceptions import TileNotDiggableError
-from antfarm.tile import Tile, TileKind
+from antfarm.tile import TileKind
 from antfarm.world import World
 
 # Speed expressed as a multiplier with 1.0 as the default rate.
@@ -56,12 +57,21 @@ class Simulation:
         center_x = self.world.width // 2
         center_y = self.world.height // 2
 
-        self.world.set_tile(center_x, center_y, Tile(kind=TileKind.TUNNEL))
+        # Generate world before placing ants
+        worldgen.generate(self.world, self._rng, center_x, center_y)
 
+        # Place ants
         for _ in range(count):
-            # Each ant gets its own random number generator, derived from the root RNG
             ant_rng = random.Random(self._rng.random())
-            self.colony.add(Ant(x=center_x, y=center_y, rng=ant_rng))
+            self.colony.add(
+                Ant(
+                    x=center_x,
+                    y=center_y,
+                    rng=ant_rng,
+                    energy=config.STARTING_ENERGY,
+                )
+            )
+
 
     # -- command API ---------------------------------------------------
 
@@ -117,6 +127,7 @@ class Simulation:
                 if not self.world.tile_at(x, y).is_passable():
                     raise ValueError(f"Ant tried to move into non-passable tile at ({x}, {y})")
                 ant.x, ant.y = x, y
+                self._maybe_eat(ant)
 
             case Dig(x=x, y=y):
                 try:
@@ -126,3 +137,24 @@ class Simulation:
 
             case _:
                 raise TypeError(f"Unknown action type: {type(action).__name__}")
+
+    def _maybe_eat(self, ant: Ant) -> None:
+        """If the ant just stepped onto a food tile, eat the food."""
+        tile = self.world.tile_at(ant.x, ant.y)
+        if not tile.is_food():
+            return
+
+        # eat food
+        ant.energy += config.SCOUT_REWARD
+        # convert food tile to tunnel
+        tile.food_value = 0
+        tile.kind = TileKind.TUNNEL
+
+    @property
+    def food_remaining(self) -> int:
+        """Total food left in the world."""
+        return sum(
+            self.world.tile_at(x, y).food_value
+            for y in range(self.world.height)
+            for x in range(self.world.width)
+        )

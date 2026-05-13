@@ -6,10 +6,15 @@ from antfarm.ant import Ant
 
 
 class Colony:
-    """A collection of ants."""
+    """A collection of ants.
+
+    Attributes:
+        food_reserves: Total food deposited at the nest. Food provides energy to the colony.
+    """
 
     def __init__(self, ants: list[Ant] | None = None) -> None:
         self._ants: list[Ant] = list(ants) if ants else []
+        self.food_reserves: int = 0
 
     def __len__(self) -> int:
         return len(self._ants)

@@ -65,6 +65,40 @@ class TestIdle:
         assert isinstance(action, Idle)
 
 
+class TestRockAvoidance:
+    def test_does_not_try_to_dig_rock(self):
+        """An ant surrounded by rock should idle, not dig."""
+        world = World(width=3, height=3)
+        for y in range(3):
+            for x in range(3):
+                world.set_tile(x, y, Tile(kind=TileKind.ROCK))
+        world.set_tile(1, 1, Tile(kind=TileKind.TUNNEL))
+
+        ant = Ant(x=1, y=1, rng=random.Random(0))
+        action = ant.step(world)
+        assert isinstance(action, Idle)
+
+
+class TestFoodPassability:
+    def test_moves_into_adjacent_food(self):
+        """Food is passable, ants step onto it like tunnel."""
+        world = World(width=5, height=5)
+        # Make the ant's tile and one neighbor passable.
+        world.set_tile(2, 2, Tile(kind=TileKind.TUNNEL))
+        world.set_tile(3, 2, Tile(kind=TileKind.FOOD, food_value=1))
+
+        # Try a few seeds to find one where the ant picks the food
+        # neighbor (others are dirt and would be Dig, not Move).
+        found_move = False
+        for seed in range(50):
+            ant = Ant(x=2, y=2, rng=random.Random(seed))
+            action = ant.step(world)
+            if isinstance(action, Move) and action.x == 3 and action.y == 2:
+                found_move = True
+                break
+        assert found_move, "Ant never chose to move onto food"
+
+
 class TestDeterminism:
     def test_same_seed_same_action(self):
         """Two ants with the same seed in the same world decide identically."""

@@ -31,12 +31,16 @@ class Ant:
             gets its own RNG so that adding or removing ants doesn't peturb
             the sequence another ant would have seen.
         age: ticks this ant has been alive
+        energy: How much fuel the ant has. Eating food directly raises energy.
+        carrying_food: True when the ant has picked up food but not yet deposited it at the nest.
     """
 
     x: int
     y: int
     rng: random.Random = field(repr=False)
     age: int = 0
+    energy: int = 0
+    carrying_food: bool = False
 
     def step(self, world: World) -> Action:
         """Decide what this ant does this tick."""

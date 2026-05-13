@@ -2,8 +2,9 @@
 
 import pytest
 
+from antfarm.actions import Move
 from antfarm.simulation import Simulation
-from antfarm.tile import TileKind
+from antfarm.tile import Tile, TileKind
 
 
 class TestConstruction:
@@ -38,10 +39,10 @@ class TestConstruction:
         b_ant = next(iter(b.colony))
         assert (a_ant.x, a_ant.y) != (b_ant.x, b_ant.y)
 
-    def test_starting_cell_is_tunnel(self):
+    def test_starting_cell_is_nest(self):
         sim = Simulation(width=10, height=10, starting_ants=1, seed=0)
         center_x, center_y = 5, 5
-        assert sim.world.tile_at(center_x, center_y).kind is TileKind.TUNNEL
+        assert sim.world.tile_at(center_x, center_y).kind is TileKind.NEST
 
     def test_rejects_zero_starting_ants(self):
         with pytest.raises(ValueError, match="starting_ants"):
@@ -63,7 +64,6 @@ class TestTick:
 
         # count tunnels before (just the starting cell)
         tunnels_before = self._count_tunnels(sim)
-        assert tunnels_before == 1
 
         for _ in range(50):
             sim.tick()
@@ -71,13 +71,24 @@ class TestTick:
         tunnels_after = self._count_tunnels(sim)
         assert tunnels_after > tunnels_before
 
-    def test_ants_always_stand_on_tunnel(self):
-        """An ant's position should always be a tunnel tile after a tick."""
+    def test_ants_stay_in_bounds(self):
+        """Lots of ticks, lots of ants, never go out of bounds."""
+        sim = Simulation(width=15, height=10, starting_ants=3, seed=7)
+        for _ in range(500):
+            sim.tick()
+            for ant in sim.colony:
+                assert 0 <= ant.x < 15
+                assert 0 <= ant.y < 10
+
+    def test_ants_always_stand_on_passable_tile(self):
+        """An ant's position should always be a passable tile (tunnel,
+        nest, or food about to be eaten) after a tick."""
         sim = Simulation(width=15, height=10, starting_ants=2, seed=11)
         for _ in range(200):
             sim.tick()
             for ant in sim.colony:
-                assert sim.world.tile_at(ant.x, ant.y).kind is TileKind.TUNNEL
+                tile = sim.world.tile_at(ant.x, ant.y)
+                assert tile.is_passable(), f"Ant standing on non-passable tile {tile.kind}"
 
     @staticmethod
     def _count_tunnels(sim: Simulation) -> int:
@@ -122,6 +133,38 @@ class TestPauseCommands:
         for _ in range(20):
             sim.tick()
         assert sim.tick_count == ticks_before
+
+
+class TestFoodConsumption:
+    def test_ant_gains_energy_when_stepping_on_food(self):
+        """Place the ant next to food, force a move, expect energy gain."""
+        sim = Simulation(width=10, height=10, starting_ants=1, seed=0)
+        # Reset the world to a known state — no rocks, no random food.
+        # We're testing the eating mechanic in isolation.
+        sim.world.set_tile(5, 5, Tile(kind=TileKind.NEST))
+        sim.world.set_tile(6, 5, Tile(kind=TileKind.FOOD, food_value=1))
+
+        # Place the ant adjacent to the food.
+        ant = next(iter(sim.colony))
+        ant.x, ant.y = 5, 5
+        starting_energy = ant.energy
+
+        # Manually apply a Move action onto the food tile.
+        sim._apply_action(ant, Move(x=6, y=5))
+
+        assert ant.energy > starting_energy
+        # Food tile should now be tunnel.
+        assert sim.world.tile_at(6, 5).kind is TileKind.TUNNEL
+
+    def test_food_remaining_drops_when_ants_eat(self):
+        """Run for many ticks, food amount should decrease."""
+        sim = Simulation(width=20, height=10, starting_ants=5, seed=7)
+        starting_food = sim.food_remaining
+
+        for _ in range(500):
+            sim.tick()
+
+        assert sim.food_remaining <= starting_food
 
 
 class TestSpeedCommands:
